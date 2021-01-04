@@ -1,8 +1,9 @@
-#include "duckdb/function/aggregate/algebraic_functions.hpp"
 #include "duckdb/common/vector_operations/vector_operations.hpp"
+#include "duckdb/function/aggregate/algebraic_functions.hpp"
 #include "duckdb/function/function_set.hpp"
 
 #include <cmath>
+#include <utility>
 
 namespace duckdb {
 
@@ -75,6 +76,28 @@ struct VarSampOperation : public STDDevBaseOperation {
 	}
 };
 
+struct STDDevSampStateOperation : public STDDevBaseOperation {
+	template <class T, class STATE>
+	static void Finalize(Vector &result, FunctionData *, STATE *state, T *target, nullmask_t &nullmask, idx_t idx) {
+		if (state->count == 0) {
+			nullmask[idx] = true;
+		} else {
+			double stddev_samp = state->count > 1 ? sqrt(state->dsquared / (state->count - 1)) : 0;
+
+			if (!Value::DoubleIsValid(stddev_samp)) {
+				throw OutOfRangeException("STDDEV_SAMP is out of range!");
+			}
+
+			std::string states = "{";
+			states = states + "count: " + std::to_string(state->count) + ", ";
+			states = states + "mean: " + std::to_string(state->mean) + ", ";
+			states = states + "dsquared: " + std::to_string(state->dsquared) + ", ";
+			states = states + "stddev: " + std::to_string(stddev_samp) + "}";
+			target[idx] = StringVector::AddString(result, states.c_str(), states.size());
+		}
+	}
+};
+
 struct VarPopOperation : public STDDevBaseOperation {
 	template <class T, class STATE>
 	static void Finalize(Vector &result, FunctionData *, STATE *state, T *target, nullmask_t &nullmask, idx_t idx) {
@@ -117,6 +140,7 @@ struct STDDevPopOperation : public STDDevBaseOperation {
 	}
 };
 
+
 void StdDevSampFun::RegisterFunction(BuiltinFunctions &set) {
 	AggregateFunctionSet stddev_samp("stddev_samp");
 	stddev_samp.AddFunction(AggregateFunction::UnaryAggregate<stddev_state_t, double, double, STDDevSampOperation>(
@@ -133,6 +157,14 @@ void StdDevPopFun::RegisterFunction(BuiltinFunctions &set) {
 	stddev_pop.AddFunction(AggregateFunction::UnaryAggregate<stddev_state_t, double, double, STDDevPopOperation>(
 	    LogicalType::DOUBLE, LogicalType::DOUBLE));
 	set.AddFunction(stddev_pop);
+}
+
+void StdDevPopStateFun::RegisterFunction(BuiltinFunctions &set) {
+	AggregateFunctionSet stddev_state("stddev_state");
+	stddev_state.AddFunction(
+	    AggregateFunction::UnaryAggregate<stddev_state_t, double, string_t, STDDevSampStateOperation>(
+	        LogicalType::DOUBLE, LogicalType::VARCHAR));
+	set.AddFunction(stddev_state);
 }
 
 void VarPopFun::RegisterFunction(BuiltinFunctions &set) {

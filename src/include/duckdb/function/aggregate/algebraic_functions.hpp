@@ -32,6 +32,10 @@ struct StdDevPopFun {
 	static void RegisterFunction(BuiltinFunctions &set);
 };
 
+struct StdDevPopStateFun {
+	static void RegisterFunction(BuiltinFunctions &set);
+};
+
 struct VarPopFun {
 	static void RegisterFunction(BuiltinFunctions &set);
 };

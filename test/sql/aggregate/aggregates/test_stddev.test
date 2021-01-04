@@ -115,3 +115,16 @@ query R
 select round(stddev(val), 1) from stddev_test_alias
 ----
 478.800000
+
+
+statement ok
+create table stddev_state_test(val integer, grp integer)
+
+statement ok
+insert into stddev_state_test values (42, 1), (43, 1), (42, 2), (1000, 2), (NULL, 1), (NULL, 3)
+
+# stddev_samp
+query TR
+select stddev_state(val), stddev(val) from stddev_state_test
+----
+{count: 4, mean: 281.750000, dsquared: 687844.750000, stddev: 478.833565}	478.833565

@@ -11,6 +11,7 @@ void BuiltinFunctions::RegisterAlgebraicAggregates() {
 
 	Register<StdDevSampFun>();
 	Register<StdDevPopFun>();
+	Register<StdDevPopStateFun>();
 	Register<VarPopFun>();
 	Register<VarSampFun>();
 }
